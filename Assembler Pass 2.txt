@@ -1,0 +1,267 @@
+/* ==========================================
+             ASSEMBLER – PASS 2
+   ========================================== */
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.util.ArrayList;
+
+class TableRow {
+    String symbol;
+    int address;
+    int index;
+
+    public TableRow(String symbol, int address) {
+        this.symbol = symbol;
+        this.address = address;
+    }
+
+    public TableRow(String symbol, int address, int index) {
+        this.symbol = symbol;
+        this.address = address;
+        this.index = index;
+    }
+
+    public int getIndex() { return index; }
+    public String getSymbol() { return symbol; }
+    public int getAddress() { return address; }
+}
+
+
+public class Pass_2 {
+
+    ArrayList<TableRow> SYMTAB, LITTAB;
+
+    public Pass_2() {
+        SYMTAB = new ArrayList<>();
+        LITTAB = new ArrayList<>();
+    }
+
+    public static void main(String[] args) {
+        Pass_2 pass2 = new Pass_2();
+
+        try {
+            pass2.generateCode("IC.txt");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /* -----------------------------------------
+       LOAD SYMBOL TABLE & LITERAL TABLE
+       ----------------------------------------- */
+    public void readtables() {
+
+        try {
+            BufferedReader br = new BufferedReader(new FileReader("SYMTAB.txt"));
+            String line;
+
+            while ((line = br.readLine()) != null) {
+                String parts[] = line.split("\\s+");
+                SYMTAB.add(new TableRow(parts[1], Integer.parseInt(parts[2]), Integer.parseInt(parts[0])));
+            }
+            br.close();
+
+            br = new BufferedReader(new FileReader("LITTAB.txt"));
+            while ((line = br.readLine()) != null) {
+                String parts[] = line.split("\\s+");
+                LITTAB.add(new TableRow(parts[1], Integer.parseInt(parts[2]), Integer.parseInt(parts[0])));
+            }
+            br.close();
+
+        } catch (Exception e) {
+            System.out.println("Error reading tables: " + e.getMessage());
+        }
+    }
+
+
+    /* -----------------------------------------
+         MAIN PASS 2 – MACHINE CODE GENERATION
+       ----------------------------------------- */
+    public void generateCode(String filename) throws Exception {
+
+        readtables();
+
+        BufferedReader br = new BufferedReader(new FileReader(filename));
+        BufferedWriter bw = new BufferedWriter(new FileWriter("PASS2.txt"));
+
+        String line, code;
+
+        while ((line = br.readLine()) != null) {
+
+            String parts[] = line.split("\\s+");
+
+            /* IGNORE AD & DC (02) */
+            if (parts[0].contains("AD") || parts[0].contains("DL,02")) {
+                bw.write("\n");
+                continue;
+            }
+
+            /* DATA DECLARATION (DL,01) */
+            else if (parts.length == 2 && parts[0].contains("DL")) {
+                parts[0] = parts[0].replaceAll("[^0-9]", "");
+                int constant = Integer.parseInt(parts[1].replaceAll("[^0-9]", ""));
+
+                code = "00\t0\t" + String.format("%03d", constant) + "\n";
+                bw.write(code);
+            }
+
+            /* INSTRUCTION WITH ONLY OPERAND (Example: PRINT) */
+            else if (parts.length == 2 && parts[0].contains("IS")) {
+
+                int opcode = Integer.parseInt(parts[0].replaceAll("[^0-9]", ""));
+
+                if (parts[1].contains("S")) {
+                    int index = Integer.parseInt(parts[1].replaceAll("[^0-9]", ""));
+                    code = String.format("%02d", opcode) + "\t0\t" +
+                            String.format("%03d", SYMTAB.get(index - 1).getAddress()) + "\n";
+                    bw.write(code);
+                } else if (parts[1].contains("L")) {
+                    int index = Integer.parseInt(parts[1].replaceAll("[^0-9]", ""));
+                    code = String.format("%02d", opcode) + "\t0\t" +
+                            String.format("%03d", LITTAB.get(index - 1).getAddress()) + "\n";
+                    bw.write(code);
+                }
+            }
+
+            /* SINGLE INSTRUCTION (STOP) */
+            else if (parts.length == 1 && parts[0].contains("IS")) {
+                int opcode = Integer.parseInt(parts[0].replaceAll("[^0-9]", ""));
+                code = String.format("%02d", opcode) + "\t0\t000\n";
+                bw.write(code);
+            }
+
+            /* NORMAL INSTRUCTION (3 PARTS: opcode, reg, S/L index) */
+            else if (parts[0].contains("IS") && parts.length == 3) {
+
+                int opcode = Integer.parseInt(parts[0].replaceAll("[^0-9]", ""));
+                int regcode = Integer.parseInt(parts[1]);
+
+                if (parts[2].contains("S")) {
+                    int symIndex = Integer.parseInt(parts[2].replaceAll("[^0-9]", ""));
+                    code = String.format("%02d", opcode) + "\t" + regcode + "\t" +
+                            String.format("%03d", SYMTAB.get(symIndex - 1).getAddress()) + "\n";
+                    bw.write(code);
+                } else if (parts[2].contains("L")) {
+                    int litIndex = Integer.parseInt(parts[2].replaceAll("[^0-9]", ""));
+                    code = String.format("%02d", opcode) + "\t" + regcode + "\t" +
+                            String.format("%03d", LITTAB.get(litIndex - 1).getAddress()) + "\n";
+                    bw.write(code);
+                }
+            }
+        }
+
+        bw.close();
+        br.close();
+    }
+}
+
+
+
+/* ======================================================================================
+   THEORY: ASSEMBLER – PASS 2
+   ======================================================================================
+
+   AIM:
+   To implement PASS 2 of the Assembler to convert Intermediate Code (IC) into
+   final machine code using the Symbol Table (SYMTAB) and Literal Table (LITTAB).
+
+   ROLE OF PASS 2:
+   Pass 2 reads the Intermediate Code generated by Pass 1 and performs:
+
+   ✓ Symbol resolution  
+   ✓ Literal resolution  
+   ✓ Machine code generation  
+   ✓ Assigning final addresses  
+   ✓ Ignoring assembler directives (START, END, ORIGIN, LTORG)  
+
+   Pass 2 uses:
+   • SYMTAB – stores symbols and their resolved addresses  
+   • LITTAB – stores literals and their assigned addresses  
+   • IC (Intermediate Code) – processed instruction information  
+
+   -------------------------------------------------------------------------
+   HOW PASS 2 WORKS:
+   -------------------------------------------------------------------------
+   1. **Load SYMTAB and LITTAB**  
+      These tables contain final addresses for all symbols and literals.
+
+   2. **Read the IC line-by-line**  
+      Each IC entry indicates:
+      • Instruction Type (IS, DL, AD)  
+      • Opcode  
+      • Register code  
+      • Operand reference (S,x) or (L,y)
+
+   3. **Ignore Assembler Directives (AD)**  
+      Directives like START, END, ORIGIN do not produce machine code.
+
+   4. **Handle Declarative Statements (DL)**  
+      • DL,01 → Allocate memory with given constant  
+      • DL,02 → No machine code generated (reserves space)
+
+   5. **Generate Machine Code for IS Instructions**  
+      Format:
+              OPCODE   REGISTER   MEMORY
+      Example:
+              04       1          205  
+      
+      OPCODE → extracted from IC  
+      REGISTER → directly taken  
+      MEMORY → obtained from SYMTAB/LITTAB  
+
+   6. **Zero-operand instructions (e.g., STOP)**  
+      Register and memory fields are set to 0.
+
+   -------------------------------------------------------------------------
+   MACHINE CODE FORMAT:
+   -------------------------------------------------------------------------
+        [ OPCODE ]   [ REG ]   [ MEMORY ADDRESS ]
+
+   Example:
+        04            2        105
+
+   -------------------------------------------------------------------------
+   ADVANTAGES OF PASS 2:
+   -------------------------------------------------------------------------
+   ✓ Accurate machine code generation  
+   ✓ Handles symbol and literal resolution  
+   ✓ Produces output ready for memory loading  
+   ✓ Separates concerns (Pass 1 builds tables; Pass 2 uses them)
+
+   -------------------------------------------------------------------------
+   CONCLUSION:
+   -------------------------------------------------------------------------
+   Pass 2 of the assembler converts intermediate representation into final
+   executable machine code. By resolving symbols, literals, and instructions
+   using the tables from Pass 1, it completes the translation process from
+   assembly language to machine language.
+
+====================================================================================== */
+
+
+
+/*IC*/
+(AD,01)	(C,100)
+(IS,04)	1	(L,1)
+(IS,05)	2	(S,02)
+(IS,01)	1	(L,2)
+(DL,01)	(C,5)
+(DL,01)	(C,2)
+(IS,04)	1	(S,03)
+(DL,01)	(C,5)
+(DL,02)	(C,2)
+(AD,02)
+
+
+/*literal*/
+1	5	104
+2	2	105
+
+
+/*Symbol Table*/
+1	L1	100
+2	X	106
+3	Y	107

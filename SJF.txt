@@ -1,0 +1,171 @@
+/* ================================================
+         SHORTEST JOB FIRST – PREEMPTIVE (SRTF)
+   ================================================ */
+
+import java.util.*;
+
+public class SJF {
+
+    public static void main(String args[]) {
+
+        Scanner sc = new Scanner(System.in);
+        System.out.println("*** Shortest Job First Scheduling (Preemptive SRTF) ***");
+
+        System.out.print("Enter number of processes: ");
+        int n = sc.nextInt();
+
+        int process[] = new int[n];
+        int arrivaltime[] = new int[n];
+        int burstTime[] = new int[n];
+        int remburstTime[] = new int[n];
+        int completionTime[] = new int[n];
+        int TAT[] = new int[n];
+        int waitingTime[] = new int[n];
+        int visit[] = new int[n];
+
+        int temp, start = 0, total = 0;
+        float avgwt = 0, avgTAT = 0;
+
+        // INPUT
+        for (int i = 0; i < n; i++) {
+            process[i] = i + 1;
+            System.out.println();
+
+            System.out.print("Enter Arrival Time for process " + (i + 1) + ": ");
+            arrivaltime[i] = sc.nextInt();
+
+            System.out.print("Enter Burst Time for process " + (i + 1) + ": ");
+            burstTime[i] = sc.nextInt();
+
+            remburstTime[i] = burstTime[i];
+            visit[i] = 0;
+        }
+
+        // SORT BY ARRIVAL TIME
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+
+                if (arrivaltime[i] > arrivaltime[j]) {
+
+                    temp = process[i];        process[i] = process[j];        process[j] = temp;
+                    temp = arrivaltime[i];    arrivaltime[i] = arrivaltime[j]; arrivaltime[j] = temp;
+                    temp = remburstTime[i];   remburstTime[i] = remburstTime[j]; remburstTime[j] = temp;
+                    temp = burstTime[i];      burstTime[i] = burstTime[j];    burstTime[j] = temp;
+                }
+            }
+        }
+
+        // SRTF MAIN LOGIC
+        while (true) {
+            int min = Integer.MAX_VALUE;
+            int c = n;
+
+            if (total == n)
+                break;
+
+            for (int i = 0; i < n; i++) {
+                if ((arrivaltime[i] <= start) && (visit[i] == 0) && (burstTime[i] < min)) {
+                    min = burstTime[i];
+                    c = i;
+                }
+            }
+
+            if (c == n) {
+                start++;
+            } else {
+                burstTime[c]--;
+                start++;
+
+                if (burstTime[c] == 0) {
+                    completionTime[c] = start;
+                    visit[c] = 1;
+                    total++;
+                }
+            }
+        }
+
+        // CALCULATE TAT & WAITING TIME
+        for (int i = 0; i < n; i++) {
+            TAT[i] = completionTime[i] - arrivaltime[i];
+            waitingTime[i] = TAT[i] - remburstTime[i];
+
+            avgwt += waitingTime[i];
+            avgTAT += TAT[i];
+        }
+
+        // DISPLAY TABLE
+        System.out.println("\n*** Shortest Job First Scheduling (Preemptive - SRTF) ***");
+        System.out.println("Process\tAT\tBT\tCT\tTAT\tWT");
+        System.out.println("--------------------------------------------------------------");
+
+        for (int i = 0; i < n; i++) {
+            System.out.println("P" + process[i] + "\t" + arrivaltime[i] + "ms\t" + remburstTime[i] + "ms\t"
+                    + completionTime[i] + "ms\t" + TAT[i] + "ms\t" + waitingTime[i] + "ms");
+        }
+
+        avgTAT /= n;
+        avgwt /= n;
+
+        System.out.println("\nAverage Turn Around Time: " + avgTAT);
+        System.out.println("Average Waiting Time: " + avgwt);
+
+        sc.close();
+    }
+}
+
+
+/* ------------------------------------------------------------------------
+   THEORY: SHORTEST JOB FIRST (SJF) – PREEMPTIVE (SRTF)
+   ------------------------------------------------------------------------
+
+   AIM:
+   To implement Shortest Job First Scheduling (Preemptive), also known as
+   Shortest Remaining Time First (SRTF), and calculate CT, TAT, WT, and averages.
+
+   THEORY:
+   - SJF selects the process with the **shortest burst time**.
+   - In **preemptive SJF (SRTF)**, the CPU can be taken away if a new process arrives
+     with a smaller remaining burst time.
+   - It minimizes the average waiting time among all scheduling algorithms.
+
+   TERMINOLOGY:
+   • AT (Arrival Time) → Time when a process enters ready queue  
+   • BT (Burst Time) → Total CPU time needed  
+   • Remaining BT → Keeps decreasing in preemptive mode  
+   • CT (Completion Time) → Time when execution finishes  
+   • TAT = CT – AT  
+   • WT = TAT – BT  
+
+   WORKING OF SRTF:
+   1. Sort all processes by arrival time.
+   2. At each time unit, select the process with:
+         - Arrival time ≤ current time
+         - Smallest remaining burst time
+   3. Execute process for **1 unit of time**.
+   4. If a new process arrives with shorter BT → PREEMPT.
+   5. When BT becomes zero:
+         → mark process completed
+         → calculate CT, TAT, WT
+   6. Continue until all processes are completed.
+
+   ADVANTAGES:
+   ✓ Minimum average waiting time  
+   ✓ Preemptive → handles short jobs efficiently  
+   ✓ Good for real-time systems with short tasks  
+
+   DISADVANTAGES:
+   ✗ High overhead due to frequent context switching  
+   ✗ Requires precise knowledge of execution time  
+   ✗ Long processes may starve  
+
+   APPLICATIONS:
+   • Real-time operating systems  
+   • CPU scheduling with strict timing  
+   • Frequently used where shorter tasks must finish early  
+
+   CONCLUSION:
+   SJF (Preemptive) or SRTF provides optimal scheduling for minimizing average
+   waiting time. It always executes the process with the shortest remaining time,
+   making it efficient—but prone to starvation for large jobs.
+
+------------------------------------------------------------------------ */

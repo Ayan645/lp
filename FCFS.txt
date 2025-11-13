@@ -1,0 +1,139 @@
+/* FCFS - First Come First Serve CPU Scheduling Algorithm */
+
+import java.util.Scanner;
+
+public class FCFS {
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        int n, temp;
+        float avgtat = 0, avgwt = 0;
+
+        System.out.println("*** First Come First Serve Scheduling ***");
+        System.out.print("Enter Number of Process: ");
+        n = sc.nextInt();
+
+        int process[] = new int[n];
+        int arrivaltime[] = new int[n];
+        int burstTime[] = new int[n];
+        int completionTime[] = new int[n];
+        int TAT[] = new int[n];
+        int waitingTime[] = new int[n];
+
+        // Input arrival and burst times
+        for (int i = 0; i < n; i++) {
+            process[i] = (i + 1);
+            System.out.print("\nEnter Arrival Time for process " + (i + 1) + ": ");
+            arrivaltime[i] = sc.nextInt();
+            System.out.print("Enter Burst Time for process " + (i + 1) + ": ");
+            burstTime[i] = sc.nextInt();
+        }
+
+        // Sort processes according to arrival time
+        for (int i = 0; i < n - 1; i++) {
+            for (int j = i + 1; j < n; j++) {
+                if (arrivaltime[i] > arrivaltime[j]) {
+                    temp = process[j];
+                    process[j] = process[i];
+                    process[i] = temp;
+
+                    temp = arrivaltime[j];
+                    arrivaltime[j] = arrivaltime[i];
+                    arrivaltime[i] = temp;
+
+                    temp = burstTime[j];
+                    burstTime[j] = burstTime[i];
+                    burstTime[i] = temp;
+                }
+            }
+        }
+
+        // Calculate Completion Time
+        for (int i = 0; i < n; i++) {
+            if (i == 0) {
+                completionTime[i] = arrivaltime[i] + burstTime[i];
+            } else {
+                if (arrivaltime[i] > completionTime[i - 1]) {
+                    completionTime[i] = arrivaltime[i] + burstTime[i];
+                } else {
+                    completionTime[i] = completionTime[i - 1] + burstTime[i];
+                }
+            }
+        }
+
+        // Display Results
+        System.out.println("\n*** First Come First Serve Scheduling ***");
+        System.out.println("Process\tArrival Time\tBurst Time\tCompletion Time\tTurn Around Time\tWaiting Time");
+        System.out.println("-------------------------------------------------------------------------------");
+
+        for (int i = 0; i < n; i++) {
+            TAT[i] = completionTime[i] - arrivaltime[i];
+            waitingTime[i] = TAT[i] - burstTime[i];
+            avgtat += TAT[i];
+            avgwt += waitingTime[i];
+
+            System.out.println("P" + process[i] + "\t\t" + arrivaltime[i] + "ms\t\t" + burstTime[i] + "ms\t\t"
+                    + completionTime[i] + "ms\t\t\t" + TAT[i] + "ms\t\t\t" + waitingTime[i] + "ms");
+        }
+
+        System.out.println("\nAverage Turn Around Time: " + (avgtat / n) + " ms");
+        System.out.println("Average Waiting Time: " + (avgwt / n) + " ms");
+
+        sc.close();
+    }
+}
+
+
+/* ---------------------------------------------------------------------
+   THEORY: FIRST COME FIRST SERVE (FCFS) CPU SCHEDULING ALGORITHM
+   ---------------------------------------------------------------------
+
+   AIM:
+   To implement the First Come First Serve (FCFS) CPU Scheduling Algorithm
+   to calculate Completion Time, Turn Around Time (TAT), and Waiting Time (WT)
+   for a given set of processes.
+
+   THEORY:
+   - FCFS is the simplest CPU scheduling algorithm.
+   - In this technique, the process that arrives first is executed first.
+   - It follows the “First In, First Out (FIFO)” principle.
+   - The CPU is allocated in the order of process arrival times.
+
+   TERMINOLOGY:
+   - Arrival Time (AT): Time when a process arrives in the ready queue.
+   - Burst Time (BT): CPU execution time required by a process.
+   - Completion Time (CT): Time when process finishes execution.
+   - Turn Around Time (TAT): TAT = CT – AT
+   - Waiting Time (WT): WT = TAT – BT
+
+   STEPS / ALGORITHM:
+   1. Sort all processes according to their arrival time.
+   2. For the first process, CT = AT + BT.
+   3. For the next process:
+        If its arrival time > previous completion time,
+           CT = AT + BT
+        Else
+           CT = Previous CT + BT
+   4. Calculate:
+        TAT = CT - AT
+        WT = TAT - BT
+   5. Find Average Turn Around Time and Average Waiting Time.
+
+   ADVANTAGES:
+   - Simple and easy to implement.
+   - Works well for smaller systems or batch processing.
+
+   DISADVANTAGES:
+   - Non-preemptive → once CPU allocated, it cannot be taken until finished.
+   - Leads to "Convoy Effect" where small processes wait for large ones.
+
+   APPLICATIONS:
+   - Used in simple batch systems.
+   - Basis for understanding other complex scheduling algorithms.
+
+   CONCLUSION:
+   FCFS scheduling executes processes in their order of arrival.
+   It is fair but may cause poor utilization and longer average waiting times
+   if short jobs arrive after long ones.
+
+--------------------------------------------------------------------- */

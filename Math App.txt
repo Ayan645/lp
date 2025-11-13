@@ -1,0 +1,130 @@
+/* MathApp Program */
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+class MathOperation {
+    public static double add(double a, double b) {
+        return a + b;
+    }
+
+    public static double subtract(double a, double b) {
+        return a - b;
+    }
+}
+
+public class MathApp {
+    public static void main(String[] args) {
+        JFrame frame = new JFrame("Math Operations");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(300, 150);
+
+        JPanel panel = new JPanel();
+        frame.add(panel);
+
+        JLabel resultLabel = new JLabel("Result: ");
+        JTextField num1Field = new JTextField(10);
+        JTextField num2Field = new JTextField(10);
+        JButton addButton = new JButton("Add");
+        JButton subtractButton = new JButton("Subtract");
+
+        panel.add(new JLabel("Number 1:"));
+        panel.add(num1Field);
+        panel.add(new JLabel("Number 2:"));
+        panel.add(num2Field);
+        panel.add(addButton);
+        panel.add(subtractButton);
+        panel.add(resultLabel);
+
+        // Action for Add Button
+        addButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    double num1 = Double.parseDouble(num1Field.getText());
+                    double num2 = Double.parseDouble(num2Field.getText());
+                    double result = MathOperation.add(num1, num2);
+                    resultLabel.setText("Result: " + result);
+                } catch (NumberFormatException ex) {
+                    resultLabel.setText("Invalid input.");
+                }
+            }
+        });
+
+        // Action for Subtract Button
+        subtractButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    double num1 = Double.parseDouble(num1Field.getText());
+                    double num2 = Double.parseDouble(num2Field.getText());
+                    double result = MathOperation.subtract(num1, num2);
+                    resultLabel.setText("Result: " + result);
+                } catch (NumberFormatException ex) {
+                    resultLabel.setText("Invalid input.");
+                }
+            }
+        });
+
+        frame.setVisible(true);
+    }
+}
+
+
+/* ----------------------------------------------------------------------
+   THEORY: JAVA SWING APPLICATION – BASIC MATH OPERATIONS
+   ----------------------------------------------------------------------
+
+   AIM:
+   To create a GUI-based Java application using Swing that performs 
+   simple arithmetic operations (Addition and Subtraction) using 
+   button clicks and displays the result.
+
+   SOFTWARE USED:
+   - Java JDK
+   - Java Swing Framework
+   - OOP Concepts (Classes, Methods)
+   - Event Handling (ActionListener)
+
+   CONCEPTS USED:
+
+   1) Swing Components:
+      - JFrame: Main window of the application.
+      - JPanel: Container used to organize UI controls.
+      - JLabel: Used to display text (e.g., “Result:”).
+      - JTextField: Used to accept user input.
+      - JButton: Triggers actions (Add / Subtract).
+
+   2) Event Handling:
+      - Each button uses ActionListener to detect clicks.
+      - actionPerformed() method retrieves numbers, performs calculations, 
+        and updates the result on the screen.
+
+   3) OOP Concepts:
+      - Class MathOperation contains reusable static methods:
+           add(a, b), subtract(a, b)
+      - Encourages separation of GUI and logic.
+
+   4) Exception Handling:
+      - try–catch block handles invalid input (non-numeric entries).
+      - Prevents program from crashing.
+
+   5) GUI Workflow:
+      Step 1: User enters two numbers.
+      Step 2: User clicks “Add” or “Subtract”.
+      Step 3: Program performs calculation.
+      Step 4: Output is displayed on JLabel.
+
+   ADVANTAGES:
+   ✓ Easy to use interface  
+   ✓ Demonstrates real-world event-driven programming  
+   ✓ Clean separation between UI and logic  
+   ✓ Supports input validation
+
+   CONCLUSION:
+   This program successfully demonstrates creating a basic GUI in Java 
+   using Swing, implementing event-driven programming, handling user 
+   input, and performing arithmetic operations using OOP principles.
+---------------------------------------------------------------------- */

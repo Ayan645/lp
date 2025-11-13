@@ -1,0 +1,159 @@
+/* Least Recently Used (LRU) Page Replacement Algorithm */
+
+import java.util.*;
+
+public class LeastRecentlyUsed {
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+        ArrayList<Integer> arr = new ArrayList<>();
+        int noofpages, capacity, hit = 0, fault = 0, index = 0;
+        boolean isFull = false;
+        double hitRatio, faultRatio;
+
+        System.out.print("Enter the number of pages you want to enter: ");
+        noofpages = sc.nextInt();
+
+        int pages[] = new int[noofpages];
+        for (int i = 0; i < noofpages; i++) {
+            pages[i] = sc.nextInt();
+        }
+
+        System.out.print("Enter the capacity of frame: ");
+        capacity = sc.nextInt();
+
+        int frame[] = new int[capacity];
+        int table[][] = new int[noofpages][capacity];
+
+        // Initialize frames with -1 (empty)
+        for (int i = 0; i < capacity; i++) {
+            frame[i] = -1;
+        }
+
+        System.out.println("----------------------------------------------------------------------");
+
+        // LRU Logic
+        for (int i = 0; i < noofpages; i++) {
+
+            if (arr.contains(pages[i])) {
+                arr.remove((Integer) pages[i]);
+            }
+            arr.add(pages[i]);
+
+            int search = -1;
+
+            // Check if page is HIT
+            for (int j = 0; j < capacity; j++) {
+                if (frame[j] == pages[i]) {
+                    search = j;
+                    hit++;
+                    System.out.printf("%4s", "H");
+                    break;
+                }
+            }
+
+            // Page Fault Handling
+            if (search == -1) {
+
+                if (isFull) {
+                    int min_loc = noofpages;
+
+                    for (int j = 0; j < capacity; j++) {
+                        if (arr.contains(frame[j])) {
+                            int temp = arr.indexOf(frame[j]);
+                            if (temp < min_loc) {
+                                min_loc = temp;
+                                index = j;
+                            }
+                        }
+                    }
+                }
+
+                frame[index] = pages[i];
+                fault++;
+                System.out.printf("%4s", "F");
+
+                index++;
+                if (index == capacity) {
+                    index = 0;
+                    isFull = true;
+                }
+            }
+
+            System.arraycopy(frame, 0, table[i], 0, capacity);
+        }
+
+        System.out.println("\n----------------------------------------------------------------------");
+
+        // PRINT TABLE
+        for (int i = 0; i < capacity; i++) {
+            for (int j = 0; j < noofpages; j++)
+                System.out.printf("%3d ", table[j][i]);
+            System.out.println();
+        }
+
+        System.out.println("----------------------------------------------------------------------");
+
+        hitRatio = ((double) hit / noofpages) * 100;
+        faultRatio = ((double) fault / noofpages) * 100;
+
+        System.out.println("Page Fault: " + fault + "\nPage Hit: " + hit);
+        System.out.printf("Hit Ratio: %.2f \nFault Ratio: %.2f ", hitRatio, faultRatio);
+
+        sc.close();
+    }
+}
+
+
+/* ---------------------------------------------------------------------
+   THEORY: LEAST RECENTLY USED (LRU) PAGE REPLACEMENT ALGORITHM
+   ---------------------------------------------------------------------
+
+   AIM:
+   To implement the Least Recently Used (LRU) Page Replacement Algorithm 
+   and calculate page hits, page faults, hit ratio, and fault ratio.
+
+   THEORY:
+   - LRU is a page replacement algorithm used in memory management.
+   - It replaces the page that has not been used for the longest period.
+   - It is based on the assumption that pages used recently will likely be used again soon.
+
+   KEY TERMS:
+   - Page: A fixed-size block of memory.
+   - Frame: A slot in physical memory to hold a page.
+   - Page Hit: Page is found in frame → no replacement.
+   - Page Fault: Page not found → replacement required.
+   - Hit Ratio = (Page Hits / Total Pages) × 100
+   - Fault Ratio = (Page Faults / Total Pages) × 100
+
+   WORKING OF LRU:
+   1. Maintain a list (or stack) that tracks order of page usage.
+   2. When a page is accessed:
+         - If present → move it to most recently used position.
+         - If not present → page fault occurs.
+   3. If frames are full:
+         - Replace the page with least recent use.
+   4. Update frames and track hits/faults.
+
+   ADVANTAGES:
+   ✓ Better performance than FIFO  
+   ✓ Avoids Belady’s anomaly  
+   ✓ More accurate because it uses actual usage history  
+
+   DISADVANTAGES:
+   ✗ Higher overhead (tracking usage order)  
+   ✗ Requires additional memory/data structures  
+   ✗ Expensive for hardware implementation  
+
+   APPLICATIONS:
+   - Virtual memory systems  
+   - Cache memory (CPU, Web browsers, databases)  
+   - Operating systems page replacement  
+
+   CONCLUSION:
+   LRU is an efficient page replacement algorithm that minimizes page faults 
+   by tracking and replacing the least recently accessed page. It provides 
+   better performance compared to FIFO and is widely used in cache systems.
+
+--------------------------------------------------------------------- */

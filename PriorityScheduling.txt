@@ -1,0 +1,168 @@
+/* ================================
+     PRIORITY SCHEDULING (PREEMPTIVE)
+   ================================ */
+
+import java.util.Scanner;
+
+class PriorityScheduling {
+
+    public static void main(String[] args) {
+
+        System.out.println("*** Priority Scheduling (Preemptive) ***");
+        Scanner sc = new Scanner(System.in);
+
+        System.out.print("Enter Number of Processes: ");
+        int n = sc.nextInt();
+
+        int process[] = new int[n];
+        int arrivaltime[] = new int[n];
+        int burstTime[] = new int[n];
+        int burstTimecopy[] = new int[n];
+        int completionTime[] = new int[n];
+        int priority[] = new int[n + 1];
+        int waitingTime[] = new int[n];
+        int TAT[] = new int[n];
+
+        int count = 0, min = 0, time = 0, end;
+        double avgWT = 0, avgTAT = 0;
+        int temp;
+
+        // INPUT SECTION
+        for (int i = 0; i < n; i++) {
+            process[i] = (i + 1);
+            System.out.println("");
+
+            System.out.print("Enter Arrival Time for process " + (i + 1) + ": ");
+            arrivaltime[i] = sc.nextInt();
+
+            System.out.print("Enter Burst Time for process " + (i + 1) + ": ");
+            burstTime[i] = sc.nextInt();
+
+            System.out.print("Enter Priority for process " + (i + 1) + ": ");
+            priority[i] = sc.nextInt();
+        }
+
+        // SORT BY ARRIVAL TIME, then by priority
+        for (int i = 0; i < n - 1; i++) {
+            for (int j = i + 1; j < n; j++) {
+
+                if (arrivaltime[i] > arrivaltime[j] ||
+                    (arrivaltime[i] == arrivaltime[j] && priority[j] > priority[i])) {
+
+                    temp = process[i];       process[i] = process[j];       process[j] = temp;
+                    temp = arrivaltime[i];   arrivaltime[i] = arrivaltime[j]; arrivaltime[j] = temp;
+                    temp = priority[i];      priority[i] = priority[j];      priority[j] = temp;
+                    temp = burstTime[i];     burstTime[i] = burstTime[j];     burstTime[j] = temp;
+                }
+            }
+        }
+
+        // Copy burst times
+        System.arraycopy(burstTime, 0, burstTimecopy, 0, n);
+
+        priority[n] = 999; // Dummy high value
+
+        // MAIN LOGIC (Preemptive)
+        for (time = 0; count != n; time++) {
+            min = n;
+
+            for (int i = 0; i < n; i++) {
+                if (arrivaltime[i] <= time && burstTime[i] > 0 && priority[i] < priority[min]) {
+                    min = i;
+                }
+            }
+
+            burstTime[min]--;
+
+            if (burstTime[min] == 0) {
+                count++;
+                end = time + 1;
+                completionTime[min] = end;
+
+                waitingTime[min] = end - arrivaltime[min] - burstTimecopy[min];
+                TAT[min] = end - arrivaltime[min];
+            }
+        }
+
+        // CALCULATE AVERAGES
+        for (int i = 0; i < n; i++) {
+            avgTAT += TAT[i];
+            avgWT += waitingTime[i];
+        }
+
+        avgTAT /= n;
+        avgWT /= n;
+
+        // OUTPUT TABLE
+        System.out.println("\n*** Priority Scheduling (Preemptive) ***");
+        System.out.println("Process\tAT\tBT\tCT\tTAT\tWT");
+        System.out.println("-----------------------------------------------");
+
+        for (int i = 0; i < n; i++) {
+            System.out.println("P" + process[i] + "\t" + arrivaltime[i] + "ms\t"
+                    + burstTimecopy[i] + "ms\t" + completionTime[i] + "ms\t"
+                    + TAT[i] + "ms\t" + waitingTime[i] + "ms");
+        }
+
+        System.out.println("\nAverage Waiting Time: " + avgWT);
+        System.out.println("Average Turn Around Time: " + avgTAT);
+
+        sc.close();
+    }
+}
+
+
+/* -------------------------------------------------------------------------
+   THEORY: PRIORITY SCHEDULING (PREEMPTIVE)
+   -------------------------------------------------------------------------
+
+   AIM:
+   To implement the Priority Scheduling (Preemptive) CPU scheduling algorithm 
+   and calculate Waiting Time (WT), Turnaround Time (TAT), and Completion Time (CT).
+
+   THEORY:
+   - Priority scheduling assigns the CPU to the process with the **highest priority**.
+   - In **preemptive mode**, if a new process arrives with a higher priority, it 
+     immediately preempts the currently running process.
+   - Lower numeric value = higher priority (in most implementations).
+
+   TERMINOLOGY:
+   - Arrival Time (AT): Time when a process enters the ready queue.
+   - Burst Time (BT): Total CPU time required by the process.
+   - Priority: Determines which process runs first.
+   - Completion Time (CT): Time when the process finishes.
+   - Turnaround Time (TAT):  TAT = CT - AT
+   - Waiting Time (WT):      WT = TAT - BT
+
+   STEPS OF PREEMPTIVE PRIORITY SCHEDULING:
+   1. Sort processes based on arrival time.
+   2. At each time unit, select the process with:
+          • Arrival time ≤ current time
+          • Highest priority (lowest value)
+   3. Execute the selected process for 1 unit of time.
+   4. If a new process arrives with higher priority → preempt.
+   5. When a process finishes (BT = 0):
+          • Update CT, TAT, WT.
+   6. Continue until all processes complete.
+
+   ADVANTAGES:
+   ✓ More responsive to high-priority processes  
+   ✓ Better for real-time systems  
+   ✓ Supports preemption (avoids blocking by long low-priority jobs)
+
+   DISADVANTAGES:
+   ✗ Lower-priority processes may starve  
+   ✗ Frequent context switching reduces performance  
+   ✗ Requires careful priority management
+
+   APPLICATIONS:
+   - Real-time operating systems  
+   - Time-critical tasks (video streaming, robotics, servers)  
+   - Systems requiring prioritized execution
+
+   CONCLUSION:
+   Preemptive Priority Scheduling selects processes based on priority while 
+   continuously checking for new arrivals. It improves responsiveness for 
+   important tasks but may cause starvation for low-priority processes.
+
+--------------------------------------------------------------------------- */

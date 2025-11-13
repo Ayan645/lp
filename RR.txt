@@ -1,0 +1,166 @@
+/* ================================================
+            ROUND ROBIN CPU SCHEDULING
+   ================================================ */
+
+import java.util.*;
+
+public class RoundRobin {
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        System.out.print("Enter number of processes: ");
+        int n = sc.nextInt();
+
+        int[] arrivalTime = new int[n];
+        int[] burstTime = new int[n];
+        int[] remainingTime = new int[n];
+        int[] completionTime = new int[n];
+        int[] waitingTime = new int[n];
+        int[] turnaroundTime = new int[n];
+
+        int time = 0, completed = 0;
+
+        System.out.print("Enter time quantum: ");
+        int quantum = sc.nextInt();
+
+        // INPUT
+        for (int i = 0; i < n; i++) {
+            System.out.println("\nEnter details for Process " + (i + 1) + ": ");
+            System.out.print("Arrival Time: ");
+            arrivalTime[i] = sc.nextInt();
+
+            System.out.print("Burst Time: ");
+            burstTime[i] = sc.nextInt();
+
+            remainingTime[i] = burstTime[i];
+        }
+
+        Queue<Integer> queue = new LinkedList<>();
+        boolean[] visited = new boolean[n];
+
+        // Add first arriving process
+        queue.add(0);
+        visited[0] = true;
+        time = arrivalTime[0];
+
+        // ROUND ROBIN LOGIC
+        while (!queue.isEmpty()) {
+
+            int i = queue.poll();
+
+            if (remainingTime[i] > quantum) {
+                time += quantum;
+                remainingTime[i] -= quantum;
+            } else {
+                time += remainingTime[i];
+                remainingTime[i] = 0;
+                completed++;
+
+                completionTime[i] = time;
+                turnaroundTime[i] = completionTime[i] - arrivalTime[i];
+                waitingTime[i] = turnaroundTime[i] - burstTime[i];
+            }
+
+            // Add new processes that arrive during execution
+            for (int j = 0; j < n; j++) {
+                if (arrivalTime[j] <= time && !visited[j] && remainingTime[j] > 0) {
+                    queue.add(j);
+                    visited[j] = true;
+                }
+            }
+
+            // If process still has remaining time, re-add it to queue
+            if (remainingTime[i] > 0)
+                queue.add(i);
+
+            // If queue is empty but processes remain → jump to next arrival
+            if (queue.isEmpty()) {
+                for (int j = 0; j < n; j++) {
+                    if (remainingTime[j] > 0) {
+                        queue.add(j);
+                        visited[j] = true;
+                        time = arrivalTime[j];
+                        break;
+                    }
+                }
+            }
+        }
+
+        // OUTPUT TABLE
+        System.out.println("\nProcess\tAT\tBT\tCT\tTAT\tWT");
+        float totalWT = 0, totalTAT = 0;
+
+        for (int i = 0; i < n; i++) {
+
+            totalWT += waitingTime[i];
+            totalTAT += turnaroundTime[i];
+
+            System.out.println("P" + (i + 1) + "\t" + arrivalTime[i] + "\t" +
+                    burstTime[i] + "\t" + completionTime[i] + "\t" +
+                    turnaroundTime[i] + "\t" + waitingTime[i]);
+        }
+
+        // AVERAGES
+        System.out.printf("\nAverage Waiting Time: %.2f", (totalWT / n));
+        System.out.printf("\nAverage Turnaround Time: %.2f\n", (totalTAT / n));
+
+        sc.close();
+    }
+}
+
+
+/* ------------------------------------------------------------------------
+   THEORY: ROUND ROBIN (RR) CPU SCHEDULING
+   ------------------------------------------------------------------------
+
+   AIM:
+   To implement the Round Robin CPU Scheduling algorithm using a fixed 
+   time quantum and calculate Completion Time (CT), Turnaround Time (TAT),
+   Waiting Time (WT), and their averages.
+
+   THEORY:
+   - Round Robin is a **preemptive** scheduling algorithm.
+   - Each process gets CPU for a fixed time slice called **Time Quantum**.
+   - If a process is not finished in its time slice, it is preempted and 
+     placed at the **back of the ready queue**.
+   - RR is designed for **time-sharing systems**, providing fairness.
+
+   TERMINOLOGY:
+   • Time Quantum → Fixed CPU time allocated per process  
+   • Arrival Time (AT)  
+   • Burst Time (BT)  
+   • Completion Time (CT)  
+   • Turnaround Time (TAT) = CT – AT  
+   • Waiting Time (WT) = TAT – BT  
+
+   WORKING OF ROUND ROBIN:
+   1. Put all processes in the ready queue based on arrival time.
+   2. Pick the first process; give CPU for 'quantum' time.
+   3. If process finishes → record CT.
+   4. If not finished → subtract quantum and move it to back of queue.
+   5. Add newly arrived processes to the queue as time progresses.
+   6. Continue until all processes complete.
+
+   ADVANTAGES:
+   ✓ Simple, fair, starvation-free  
+   ✓ Good response time for interactive systems  
+   ✓ Preemptive → ideal for time-sharing OS  
+
+   DISADVANTAGES:
+   ✗ Too small quantum → too many context switches  
+   ✗ Too large quantum → behaves like FCFS  
+   ✗ Longer average waiting time than SJF  
+
+   APPLICATIONS:
+   • Time-sharing operating systems  
+   • Real-time systems needing quick response  
+   • Multi-user environments  
+
+   CONCLUSION:
+   Round Robin ensures fair allocation of CPU time to all processes. It 
+   provides better response time and avoids starvation, making it suitable 
+   for interactive and multi-user environments.
+
+------------------------------------------------------------------------ */

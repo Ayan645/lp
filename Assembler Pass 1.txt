@@ -1,0 +1,281 @@
+/* ============================
+      PASS 1 ASSEMBLER
+   ============================ */
+
+import java.io.*;
+import java.util.*;
+
+class MnemonicTable {
+    public String mnemonic;
+    public String opcode;
+    public int num;
+
+    public MnemonicTable(String mnemonic, String opcode, int num) {
+        this.mnemonic = mnemonic;
+        this.opcode = opcode;
+        this.num = num;
+    }
+}
+
+public class Pass_1 {
+
+    Map<String, MnemonicTable> is = new Hashtable<>();
+    ArrayList<String> symtab = new ArrayList<>();
+    ArrayList<Integer> symaddr = new ArrayList<>();
+    ArrayList<String> littab = new ArrayList<>();
+    ArrayList<Integer> litaddr = new ArrayList<>();
+    ArrayList<Integer> pooltab = new ArrayList<>();
+    int LC = 0;
+
+    /* ----------------------------------------------------
+     *  Create Instruction Set (IS) Table
+     * ---------------------------------------------------- */
+    public void createIS() {
+        is.put("STOP",  new MnemonicTable("STOP",  "00", 0));
+        is.put("ADD",   new MnemonicTable("ADD",   "01", 0));
+        is.put("SUB",   new MnemonicTable("SUB",   "02", 0));
+        is.put("MULT",  new MnemonicTable("MULT",  "03", 0));
+        is.put("MOVER", new MnemonicTable("MOVER", "04", 0));
+        is.put("MOVEM", new MnemonicTable("MOVEM", "05", 0));
+        is.put("COMP",  new MnemonicTable("COMP",  "06", 0));
+        is.put("BC",    new MnemonicTable("BC",    "07", 0));
+        is.put("DIV",   new MnemonicTable("DIV",   "08", 0));
+        is.put("READ",  new MnemonicTable("READ",  "09", 0));
+        is.put("PRINT", new MnemonicTable("PRINT", "10", 0));
+    }
+
+    /* ----------------------------------------------------
+     *  Generate Intermediate Code (IC) – PASS 1
+     * ---------------------------------------------------- */
+    public void generateIC() throws Exception {
+
+        BufferedWriter wr = new BufferedWriter(new FileWriter("ic.txt"));
+        BufferedReader br = new BufferedReader(new FileReader("input.asm"));
+
+        String line = "";
+        pooltab.add(0);
+
+        wr.write("---------------------\n  Intermediate Code\n---------------------\n");
+
+        while ((line = br.readLine()) != null) {
+
+            String[] split = line.split("\\s+");
+
+            /* LABEL HANDLING */
+            if (split[0].length() > 0) {
+                if (!symtab.contains(split[0])) {
+                    symtab.add(split[0]);
+                    symaddr.add(LC);
+                } else {
+                    int index = symtab.indexOf(split[0]);
+                    symaddr.set(index, LC);
+                }
+            }
+
+            /* ASSEMBLER DIRECTIVES */
+            if (split[1].equals("START")) {
+                LC = Integer.parseInt(split[2]);
+                wr.write("(AD,01) (C," + split[2] + ")\n");
+            }
+
+            else if (split[1].equals("ORIGIN")) {
+                LC = getAddressValue(split[2]);
+            }
+
+            else if (split[1].equals("EQU")) {
+                int addr = getAddressValue(split[2]);
+                int idx = symtab.indexOf(split[0]);
+                symaddr.set(idx, addr);
+            }
+
+            else if (split[1].equals("LTORG") || split[1].equals("END")) {
+
+                for (int i = pooltab.get(pooltab.size() - 1); i < littab.size(); i++) {
+                    if (litaddr.get(i) == 0) {
+                        litaddr.set(i, LC);
+                        LC++;
+                    }
+                }
+
+                if (split[1].equals("LTORG"))
+                    pooltab.add(littab.size());
+
+                wr.write(split[1].equals("END") ? "(AD,04)\n" : "(AD,05)\n");
+            }
+
+            else if (split[1].equals("DS")) {
+                LC += Integer.parseInt(split[2]);
+                wr.write("(DL,01) (C," + split[2] + ")\n");
+            }
+
+            else if (split[1].equals("DC")) {
+                LC++;
+                wr.write("(DL,02) (C," + split[2].replace("'", "") + ")\n");
+            }
+
+            /* INSTRUCTION HANDLING */
+            else if (is.containsKey(split[1])) {
+
+                wr.write("(IS," + is.get(split[1]).opcode + ") ");
+
+                /* REGISTER */
+                String reg = split[2].replace(",", "");
+                if (reg.equals("AREG")) wr.write("(1) ");
+                else if (reg.equals("BREG")) wr.write("(2) ");
+                else if (reg.equals("CREG")) wr.write("(3) ");
+                else if (reg.equals("DREG")) wr.write"(4) ");
+                else {
+                    if (!symtab.contains(reg)) {
+                        symtab.add(reg);
+                        symaddr.add(0);
+                    }
+                    wr.write("(S," + symtab.indexOf(reg) + ") ");
+                }
+
+                /* SYMBOL OR LITERAL */
+                if (split.length > 3) {
+                    String operand = split[3];
+
+                    if (operand.contains("=")) {
+                        String lit = operand.replace("=", "").replace("'", "");
+                        if (!littab.contains(lit)) {
+                            littab.add(lit);
+                            litaddr.add(0);
+                        }
+                        wr.write("(L," + littab.indexOf(lit) + ")");
+                    } else {
+                        if (!symtab.contains(operand)) {
+                            symtab.add(operand);
+                            symaddr.add(0);
+                        }
+                        wr.write("(S," + symtab.indexOf(operand) + ")");
+                    }
+                }
+
+                wr.write("\n");
+                LC++;
+            }
+        }
+
+        wr.close();
+        br.close();
+
+        /* WRITE SYMBOL TABLE */
+        BufferedWriter s = new BufferedWriter(new FileWriter("sym.txt"));
+        s.write("--------------------\n Symbol Table\n--------------------\nSymbol   Address\n");
+        for (int i = 0; i < symtab.size(); i++) {
+            s.write(symtab.get(i) + "\t" + symaddr.get(i) + "\n");
+        }
+        s.close();
+
+        /* WRITE LITERAL TABLE */
+        BufferedWriter l = new BufferedWriter(new FileWriter("lit.txt"));
+        l.write("--------------------\n Literal Table\n--------------------\nLiteral   Address\n");
+        for (int i = 0; i < littab.size(); i++) {
+            l.write("'" + littab.get(i) + "'\t" + litaddr.get(i) + "\n");
+        }
+        l.close();
+
+        /* WRITE POOL TABLE */
+        BufferedWriter p = new BufferedWriter(new FileWriter("pool.txt"));
+        p.write("--------------------\n Pool Table\n--------------------\nPool Index  Literal Index\n");
+        for (int i = 0; i < pooltab.size(); i++) {
+            p.write(i + "\t" + pooltab.get(i) + "\n");
+        }
+        p.close();
+    }
+
+    private int getAddressValue(String expr) {
+        if (expr.contains("+")) {
+            String[] sp = expr.split("\\+");
+            return symaddr.get(symtab.indexOf(sp[0])) + Integer.parseInt(sp[1]);
+        } 
+        if (expr.contains("-")) {
+            String[] sp = expr.split("\\-");
+            return symaddr.get(symtab.indexOf(sp[0])) - Integer.parseInt(sp[1]);
+        }
+        return symaddr.get(symtab.indexOf(expr));
+    }
+
+    public static void main(String[] args) throws Exception {
+        Pass_1 p = new Pass_1();
+        p.createIS();
+        p.generateIC();
+    }
+}
+
+
+/* =====================================================================
+   THEORY: ASSEMBLER – PASS 1 IMPLEMENTATION
+   =====================================================================
+
+   AIM:
+   To implement PASS 1 of a two-pass assembler which generates the
+   Intermediate Code (IC), Symbol Table, Literal Table, and Pool Table.
+
+   WHAT PASS 1 DOES:
+   ✓ Scans the assembly program line by line  
+   ✓ Builds the **Symbol Table (SYMTAB)**  
+   ✓ Builds the **Literal Table (LITTAB)**  
+   ✓ Builds the **Pool Table (POOLTAB)**  
+   ✓ Assigns addresses by maintaining a **Location Counter (LC)**  
+   ✓ Processes **Assembler Directives** (START, ORIGIN, EQU, LTORG, END)  
+   ✓ Generates **Intermediate Code (IC)** without final machine opcodes  
+
+   IMPORTANT DATA STRUCTURES:
+   1) **SYMTAB** → Stores symbol name & its address  
+   2) **LITTAB** → Stores literal & its allocated address  
+   3) **POOLTAB** → Stores starting index of each literal pool  
+   4) **LC (Location Counter)** → Tracks memory allocation  
+   5) **IS Table** → Mnemonics with opcodes  
+
+   WORKING OF PASS 1:
+   1. Read a line from input.asm  
+   2. If it contains a **label** → add it to SYMTAB  
+   3. If it contains an **instruction (IS)** →  
+         - Write Intermediate Code  
+         - Add symbol/literal references  
+         - Increment LC  
+   4. If directive is **START** → initialize LC  
+   5. If **EQU/ORIGIN** → compute new LC or symbol value  
+   6. If **LTORG/END** → assign addresses to all pending literals & update POOLTAB  
+   7. If **DS/DC** → allocate memory & update LC  
+   8. After finishing → write SYMTAB, LITTAB, POOLTAB  
+
+   ADVANTAGES OF PASS 1:
+   ✓ Simplifies Pass-2 work  
+   ✓ Resolves forward references partially  
+   ✓ Organizes all symbols/literals before generating machine code  
+
+   OUTPUTS GENERATED:
+   1) **Intermediate Code (IC)**  
+   2) **Symbol Table (sym.txt)**  
+   3) **Literal Table (lit.txt)**  
+   4) **Pool Table (pool.txt)**  
+
+   CONCLUSION:
+   Pass 1 of an assembler processes the source program and builds
+   essential tables needed for machine code generation. It resolves
+   addresses, processes directives, and prepares all information
+   required for PASS 2.
+
+===================================================================== */
+
+
+/*
+  START    100
+A    DS    3
+L1    MOVEM    AREG,    B
+    ADD    AREG,    C
+    MOVER    AREG,    ='12'
+D    EQU    A+1
+    LTORG
+L2    PRINT    D
+    ORIGIN     A-1
+    MOVER    AREG,    ='5'
+C     DC     '5'
+    ORIGIN    L2+1
+    STOP
+B    DC    '19'
+    END        
+*/

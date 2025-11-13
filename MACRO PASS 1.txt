@@ -1,0 +1,253 @@
+/* ============================================================
+                        MACRO PASS 1
+   ============================================================ */
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+
+public class MacroPass1 {
+
+    public static void main(String[] args) throws IOException {
+
+        BufferedReader br = new BufferedReader(new FileReader("macro_input.asm"));
+
+        FileWriter mnt = new FileWriter("mnt.txt");
+        FileWriter mdt = new FileWriter("mdt.txt");
+        FileWriter kpdt = new FileWriter("kpdt.txt");
+        FileWriter pnt = new FileWriter("pntab.txt");
+        FileWriter ir = new FileWriter("intermediate.txt");
+
+        LinkedHashMap<String, Integer> pntab = new LinkedHashMap<>();
+
+        String line;
+        String macroName = null;
+
+        int mdtp = 1, kpdtp = 0, paramNo = 1, pp = 0, kp = 0, flag = 0;
+
+        while ((line = br.readLine()) != null) {
+
+            String parts[] = line.split("\\s+");
+
+            /* --------------------------
+               MACRO DEFINITION BEGINS
+               -------------------------- */
+            if (parts[0].equalsIgnoreCase("MACRO")) {
+
+                flag = 1;
+                line = br.readLine();           // Read macro header
+                parts = line.split("\\s+");
+                macroName = parts[0];
+
+                // No parameters
+                if (parts.length <= 1) {
+                    mnt.write(parts[0] + "\t" + pp + "\t" + kp + "\t" + mdtp + "\t" +
+                            (kp == 0 ? kpdtp : (kpdtp + 1)) + "\n");
+                    continue;
+                }
+
+                // Process parameters
+                for (int i = 1; i < parts.length; i++) {
+
+                    parts[i] = parts[i].replaceAll("[&,]", "");
+
+                    if (parts[i].contains("=")) {         // Keyword Parameter
+                        ++kp;
+                        String keywordParam[] = parts[i].split("=");
+
+                        pntab.put(keywordParam[0], paramNo++);
+
+                        if (keywordParam.length == 2)
+                            kpdt.write(keywordParam[0] + "\t" + keywordParam[1] + "\n");
+                        else
+                            kpdt.write(keywordParam[0] + "\t-\n");
+                    } else {                               // Positional Parameter
+                        pntab.put(parts[i], paramNo++);
+                        pp++;
+                    }
+                }
+
+                mnt.write(parts[0] + "\t" + pp + "\t" + kp + "\t" + mdtp + "\t" +
+                        (kp == 0 ? kpdtp : (kpdtp + 1)) + "\n");
+
+                kpdtp += kp;
+            }
+
+            /* ----------- END MACRO ------------- */
+            else if (parts[0].equalsIgnoreCase("MEND")) {
+
+                mdt.write(line + "\n");
+                flag = kp = pp = 0;
+                mdtp++;
+                paramNo = 1;
+
+                pnt.write(macroName + ":\t");
+                Iterator<String> itr = pntab.keySet().iterator();
+
+                while (itr.hasNext())
+                    pnt.write(itr.next() + "\t");
+
+                pnt.write("\n");
+                pntab.clear();
+            }
+
+            /* ----------- MACRO BODY (MDT) ------- */
+            else if (flag == 1) {
+
+                for (int i = 0; i < parts.length; i++) {
+
+                    if (parts[i].contains("&")) {
+                        parts[i] = parts[i].replaceAll("[&,]", "");
+                        mdt.write("(P," + pntab.get(parts[i]) + ")\t");
+                    } else {
+                        mdt.write(parts[i] + "\t");
+                    }
+                }
+                mdt.write("\n");
+                mdtp++;
+            }
+
+            /* -------- NORMAL STATEMENTS ---------- */
+            else {
+                ir.write(line + "\n");
+            }
+        }
+
+        br.close();
+        mdt.close();
+        mnt.close();
+        ir.close();
+        pnt.close();
+        kpdt.close();
+
+        System.out.println("Macro Pass 1 Processing done.");
+    }
+}
+
+
+/* ========================================================================
+   THEORY: MACRO PROCESSOR – PASS 1
+   ========================================================================
+
+   AIM:
+   To implement Pass 1 of the Macro Processor, which builds MDT, MNT,
+   KPDT, and PNTAB and generates intermediate code.
+
+   INTRODUCTION:
+   A MACRO is a single-line abbreviation for a block of instructions.
+   Macro expansion is done in two passes:
+
+       Pass 1 → Define macro, store its structure  
+       Pass 2 → Expand macro calls in the program  
+
+   Pass 1 does NOT generate machine code.  
+   It only prepares all necessary tables.
+
+   ------------------------------------------------------------------------
+   PASS 1 TASKS:
+   ------------------------------------------------------------------------
+   ✓ Identify MACRO definitions  
+   ✓ Build MNT (Macro Name Table)  
+   ✓ Build MDT (Macro Definition Table)  
+   ✓ Build PNTAB (Parameter Name Table)  
+   ✓ Build KPDT (Keyword Parameter Default Table)  
+   ✓ Convert parameters into P-codes (P,1), (P,2)…  
+   ✓ Copy all non-macro instructions to Intermediate Code  
+
+   ------------------------------------------------------------------------
+   TABLES IN PASS 1:
+   ------------------------------------------------------------------------
+
+   1) **MNT – Macro Name Table**
+      Stores:
+      • Macro name
+      • Number of positional parameters
+      • Number of keyword parameters
+      • MDT pointer (start)
+      • KPDT pointer (start)
+
+   2) **MDT – Macro Definition Table**
+      Stores:
+      • Macro body
+      • Each param replaced with P-code → (P, index)
+
+   3) **PNTAB – Parameter Name Table**
+      Stores:
+      • Parameter names (&X, &Y…)
+      Mapped to:
+      • Positional index (1,2,3…)
+
+   4) **KPDT – Keyword Parameter Default Table**
+      Stores:
+      • Keyword parameter name
+      • Default value (if any)
+
+   ------------------------------------------------------------------------
+   WORKING OF PASS 1:
+   ------------------------------------------------------------------------
+   1. Read source program line by line  
+   2. When 'MACRO' encountered:
+        • Start macro definition  
+        • Read macro prototype  
+        • Extract PP & KP  
+        • Fill MNT entry  
+        • Fill PNTAB  
+        • Fill KPDT  
+   3. For each macro body line:
+        • Replace parameters &A, &B with (P,n)  
+        • Enter into MDT  
+   4. When 'MEND' is encountered:
+        • Close MDT entry  
+        • Store PNTAB  
+   5. All non-macro lines → copied to Intermediate Code  
+
+   ------------------------------------------------------------------------
+   ADVANTAGES:
+   ------------------------------------------------------------------------
+   ✓ Reduces repetitive code  
+   ✓ Improves readability  
+   ✓ Easy software maintenance  
+   ✓ Faster coding using reusable components  
+
+   ------------------------------------------------------------------------
+   OUTPUT OF PASS 1:
+   ------------------------------------------------------------------------
+   • MNT  
+   • MDT  
+   • PNTAB  
+   • KPDT  
+   • Intermediate file for Pass 2  
+
+   ------------------------------------------------------------------------
+   CONCLUSION:
+   Macro Pass 1 scans and defines each macro, captures its structure 
+   in different tables, and prepares a clean intermediate file.  
+   It does NOT expand macros — that is performed in Pass 2.
+
+   ======================================================================== */
+
+/*
+
+MACRO
+M1	&X, &Y, &A=AREG, &B=
+MOVER	&A, &X
+ADD	&A, ='1'
+MOVER	&B, &Y
+ADD	&B, ='5'
+MEND
+MACRO
+M2	&P, &Q, &U=CREG, &V=DREG
+MOVER	&U, &P
+MOVER	&V, &Q
+ADD	&U, ='15'
+ADD	&V, ='10'
+MEND
+START	100
+M1	10, 20, &B=CREG
+M2	100, 200, &V=AREG, &U=BREG
+END
+
+*/
